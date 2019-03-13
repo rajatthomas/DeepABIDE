@@ -6,8 +6,9 @@ import pandas as pd
 import nibabel as nib
 import numpy as np
 import h5py
+import os.path as osp
 
-from scipy.special import xlogy
+# from scipy.special import xlogy
 
 
 def subject_dict(data_dir, abide_struct_path, abide_fmri_path, abide_mask_path, pheno_file,
@@ -65,68 +66,48 @@ def subject_dict(data_dir, abide_struct_path, abide_fmri_path, abide_mask_path, 
     return func_subject_vars, struct_subject_vars
 
 
-def get_entropy(series, nbins=15):
-    """
-    :param series: a 1-D array for which we need to find the entropy
-    :param nbins: number of bins for histogram
-    :return: entropy
-    """
-    # https://www.mathworks.com/matlabcentral/answers/27235-finding-entropy-from-a-probability-distribution
+# def get_entropy(series, nbins=15):
+#     """
+#     :param series: a 1-D array for which we need to find the entropy
+#     :param nbins: number of bins for histogram
+#     :return: entropy
+#     """
+#     # https://www.mathworks.com/matlabcentral/answers/27235-finding-entropy-from-a-probability-distribution
+#
+#     counts, bin_edges = np.histogram(series, bins=nbins)
+#     p = counts / np.sum(counts, dtype=float)
+#     bin_width = np.diff(bin_edges)
+#     entropy = -np.sum(xlogy(p, p / bin_width))
+#
+#     return entropy
+#
+#
+# def get_autocorr(series, lag_cc=0.5):
+#     """
+#
+#     :param series: time course
+#     :param lag_cc: width to be determined at lag=lag_cc
+#     :return:
+#     """
+#     cc = np.abs(np.correlate(series, series, mode='full'))
+#     cc = cc/cc.max()
+#     cc = np.abs(cc-lag_cc)
+#
+#     return np.argsort(cc)[0] - len(cc) # because max cc is at len(cc)
 
-    counts, bin_edges = np.histogram(series, bins=nbins)
-    p = counts / np.sum(counts, dtype=float)
-    bin_width = np.diff(bin_edges)
-    entropy = -np.sum(xlogy(p, p / bin_width))
 
-    return entropy
-
-
-def get_autocorr(series, lag_cc=0.5):
-    """
-
-    :param series: time course
-    :param lag_cc: width to be determined at lag=lag_cc
-    :return:
-    """
-    cc = np.abs(np.correlate(series, series, mode='full'))
-    cc = cc/cc.max()
-    cc = np.abs(cc-lag_cc)
-
-    return np.argsort(cc)[0] - len(cc) # because max cc is at len(cc)
-
-
-def convert2summary(data_nifti, mask_nifti=None, metric='entropy'):
+def read_summary(pheno_file, metric='entropy'):
     """
 
     :param data_nifti: path to the 4-D resting-state or other abide summary scans.
-    :param mask_nifti: path to the 3-D functional mask.
-    :return: 3D nifti-file with entropy values in each voxels.
+    :return: 4D nifti-file with metric values in each voxels for all subjects dim -> [nsubjects, <vol_dims>].
     """
 
-    all_abide_metrics = ['func_mask', 'alff', 'degree_weighted', 'eigenvector_weighted', 'falff', 'lfcd']
-    data = nib.load(data_nifti).get_data()
-    voxelwise_measure = []
+    pheno = pd.read_csv(pheno_file)
 
-    if mask_nifti is not None: # functional data
-        mask = nib.load(mask_nifti).get_data()
-        voxelwise_measure = np.zeros_like(mask,dtype=np.float32)
-        x_axis, y_axis, z_axis = mask.nonzero()
+    nsubjects = len(pheno)
 
-        for i, j, k in zip(x_axis, y_axis, z_axis):
-            if metric == 'entropy':
-                voxelwise_measure[i, j, k] = get_entropy(data[i, j, k, :])
-
-            if metric == 'autocorr':
-                voxelwise_measure[i, j, k] = np.float32(get_autocorr(data[i, j, k, :]))
-
-    if metric in all_abide_metrics:
-        voxelwise_measure = data
-
-    # for structural no calculations required
-    if metric == 'structural':
-        voxelwise_measure = data
-
-
+    metric_all_subjects = np.zeros((nsubjects, 45, 54, 45))
     return voxelwise_measure
 
 
@@ -135,17 +116,17 @@ def ensure_folder(folder):
         os.makedirs(folder)
 
 
-def create_hdf5_file(func_subject_vars, struct_subject_vars, hdf5_dir, hdf5_file, metrics = ['structural', 'entropy','autocorr']):
+def create_hdf5_file(hdf5_file, pheno_file, metrics = ['structural', 'entropy','autocorr']):
     """
 
-    :param func_subject_vars: Dictionary with keys=sub_id and values=[func, mask, diagnosis]
-    :param hdf5_dir: directory where the hdf5_file is stored
     :param hdf5_file: filename of the hdf5_file
+    :param pheno_file: csv file with file paths and DX groups
     :param metric: [entropy, ALFF, pALFF, mean or any others
     :return: hdf5 file with the metric of interest[entropy, ALFF, pALFF, mean]
     """
 
-    ensure_folder(hdf5_dir)
+
+    pheno = pd.read_csv(pheno_file)
 
     nsubjs = len(func_subject_vars)
     struct_nsubjs = len(struct_subject_vars)
@@ -161,56 +142,47 @@ def create_hdf5_file(func_subject_vars, struct_subject_vars, hdf5_dir, hdf5_file
 
         entry = hfile.create_group(u'summaries')
 
+        all_metrics = ['alff', 'cleaned_mni_rsfmri', 'T1', 'degree_centrality_binarize',
+                       'degree_centrality_weighted', 'eigenvector_centrality_binarize',
+                       'eigenvector_centrality_weighted',
+                       'lfcd_binarize', 'lfcd_weighted', 'entropy', 'reho', 'vmhc', 'autocorr', 'falff', ]
         # Remember to refactor to include as many metrics with a loop
-        if 'entropy' in metrics:
-            fmri_entropy = entry.create_dataset(u'data_entropy', shape=(nsubjs, ) + data_shape + (1,), dtype=np.float32)
 
-        if 'autocorr' in metrics:
-            fmri_autocorr = entry.create_dataset(u'data_autocorr', shape=(nsubjs,) + data_shape + (1,),
-                                                 dtype=np.float32)
+        for metric in metrics:
 
-        if 'alff' in metrics:
-            fmri_alff = entry.create_dataset(u'data_alff', shape=(nsubjs,) + data_shape + (1,),
-                                                 dtype=np.float32)
+            dataset = entry.create_dataset(metric, shape=(nsubjs, ) + data_shape + (1,), dtype=np.float32)
+            dataset[:, :, :, :] = read_summary(pheno_file, metric=metric)
 
-        if 'degree_weighted' in metrics:
-            fmri_degree_weighted = entry.create_dataset(u'data_degree_weighted', shape=(nsubjs,) + data_shape + (1,),
-                                                        dtype=np.float32)
+        # if 'entropy' in metrics:
+        #     fmri_entropy = entry.create_dataset(u'data_entropy', shape=(nsubjs, ) + data_shape + (1,), dtype=np.float32)
+        #
+        # if 'autocorr' in metrics:
+        #     fmri_autocorr = entry.create_dataset(u'data_autocorr', shape=(nsubjs,) + data_shape + (1,),
+        #                                          dtype=np.float32)
+        #
+        # if 'alff' in metrics:
+        #     fmri_alff = entry.create_dataset(u'data_alff', shape=(nsubjs,) + data_shape + (1,),
+        #                                          dtype=np.float32)
+        #
+        # if 'degree_weighted' in metrics:
+        #     fmri_degree_weighted = entry.create_dataset(u'data_degree_weighted', shape=(nsubjs,) + data_shape + (1,),
+        #                                                 dtype=np.float32)
+        #
+        # if 'eigenvector_weighted' in metrics:
+        #     fmri_eigenvector_weighted = entry.create_dataset(u'data_eigenvector_weighted', shape=(nsubjs,) + data_shape + (1,),
+        #                                                      dtype=np.float32)
+        #
+        # if 'falff' in metrics:
+        #     fmri_falff = entry.create_dataset(u'data_falff', shape=(nsubjs,) + data_shape + (1,),
+        #                                          dtype=np.float32)
+        #
+        # if 'lfcd' in metrics:
+        #     fmri_lfcd = entry.create_dataset(u'data_lfcd', shape=(nsubjs,) + data_shape + (1,),
+        #                                          dtype=np.float32)
 
-        if 'eigenvector_weighted' in metrics:
-            fmri_eigenvector_weighted = entry.create_dataset(u'data_eigenvector_weighted', shape=(nsubjs,) + data_shape + (1,),
-                                                             dtype=np.float32)
-
-        if 'falff' in metrics:
-            fmri_falff = entry.create_dataset(u'data_falff', shape=(nsubjs,) + data_shape + (1,),
-                                                 dtype=np.float32)
-
-        if 'lfcd' in metrics:
-            fmri_lfcd = entry.create_dataset(u'data_lfcd', shape=(nsubjs,) + data_shape + (1,),
-                                                 dtype=np.float32)
-
-        if 'func_mask' in metrics:
-            fmri_mask = entry.create_dataset(u'data_func_mask', shape=(nsubjs,) + data_shape + (1,),
-                                                 dtype=np.float32)
-
-        if 'structural' in metrics:
-            mri_struct = entry.create_dataset(u'data_structural', shape=(struct_nsubjs,) + struct_data_shape + (1,), dtype=np.float32)
-
-            for sub_id, (k, v) in enumerate(struct_subject_vars.items()):
-                t1 = time()
-                summary_img = convert2summary(v[0], metric='structural')
-                summary_img = np.array(summary_img, dtype=np.float32)[:, :, :, np.newaxis]
-                mri_struct[sub_id, :, :, :] = summary_img
-
-                sub_labels_struct.append(v[-1])  # Diagnosis is the last element
-                abide_ids_struct.append(k)
-                t2 = time()
-
-                stdout.write('\rstructural {}/{}: {:0.2}sec'.format(sub_id + 1, struct_nsubjs, t2 - t1))
-                stdout.flush()
-
-            entry.attrs['struct_labels'] = sub_labels_struct
-            entry.attrs['struct_sub_ids'] = abide_ids_struct
+        # if 'func_mask' in metrics:
+        #     fmri_mask = entry.create_dataset(u'data_func_mask', shape=(nsubjs,) + data_shape + (1,),
+        #                                          dtype=np.float32)
 
         for sub_id, (k, v) in enumerate(func_subject_vars.items()):
             t1 = time()
@@ -251,10 +223,10 @@ def create_hdf5_file(func_subject_vars, struct_subject_vars, hdf5_dir, hdf5_file
                 fmri_lfcd[sub_id, :, :, :] = summary_img
 
             # import pdb; pdb.set_trace()
-            if 'func_mask' in metrics:
-                summary_img = convert2summary(v['mask'], metric='func_mask')
-                summary_img = np.array(summary_img, dtype=np.int8)[:, :, :, np.newaxis]
-                fmri_mask[sub_id, :, :, :] = summary_img
+            # if 'func_mask' in metrics:
+            #     summary_img = convert2summary(v['mask'], metric='func_mask')
+            #     summary_img = np.array(summary_img, dtype=np.int8)[:, :, :, np.newaxis]
+            #     fmri_mask[sub_id, :, :, :] = summary_img
 
             sub_labels_func.append(v['DX'])  # Diagnosis is the last element
             abide_ids_func.append(k)
@@ -284,17 +256,19 @@ def get_data_shape(func_subject_vars, struct_subject_vars):
 
 def run():
 
-    data_dir   = '/data/local/deeplearning/DeepPsychNet/abide_I_data'
-    abide_rsfmri_dir  = 'Outputs/cpac/filt_noglobal/func_preproc/'
-    abide_funcmask_dir  = 'Outputs/cpac/filt_noglobal/func_mask/'
-    abide_struct_dir  = 'Outputs/cpac/filt_noglobal/T1/'
-    pheno_file = 'Phenotypic_V1_0b_preprocessed1.csv'
+    data_dir   = '/data_local/deeplearning/ABIDE_SummaryMeasures'
+    abide_struct_dir  = '/data_local/deeplearning/ABIDE_SummaryMeasures/T1/'
+    pheno_file = osp.join(data_dir, 'subject_info.csv')
 
-    output_hdf5_dir  = os.path.join(data_dir, 'hdf5_data')
-    output_hdf5_file = 'fmri_summary.hdf5'
+    output_hdf5_dir  = osp.join(data_dir, 'hdf5_data')
+    output_hdf5_file = 'fmri_summary_abideI_II.hdf5'
 
-    all_metrics = ['structural', 'entropy', 'autocorr', 'alff', 'degree_weighted', 'eigenvector_weighted', 'falff', 'lfcd']
-    # all_metrics = ['structural', 'func_mask', 'alff', 'degree_weighted', 'eigenvector_weighted', 'falff', 'lfcd']
+    # all_metrics = ['alff', 'cleaned_mni_rsfmri', 'T1','degree_centrality_binarize',
+    #                'degree_centrality_weighted', 'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted',
+    #                'lfcd_binarize','lfcd_weighted', 'entropy', 'reho', 'vmhc', 'autocorr', 'falff', ]
+    all_metrics = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
+                   'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize',
+                   'lfcd_weighted', 'entropy', 'reho', 'vmhc', 'autocorr', 'falff', ]
 
     func_subject_vars, struct_subject_vars = subject_dict(data_dir, abide_struct_dir, abide_rsfmri_dir, abide_funcmask_dir, pheno_file)
     create_hdf5_file(func_subject_vars, struct_subject_vars, output_hdf5_dir, output_hdf5_file, metrics=all_metrics)
