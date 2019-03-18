@@ -19,9 +19,9 @@ def read_summary(df_pheno, metric='entropy'):
     metric_all_subjects = np.zeros((n_subjects, 45, 54, 45))    # MNI 4mm images
 
     for i, row in df_pheno.iterrows():
-        metric_all_subjects[i, :, :, :] = nib.load(row[metric]).get_data()
+        metric_all_subjects[i, :, :, :] = np.squeeze(nib.load(row[metric]).get_data())
 
-    return metric_all_subjects
+    return np.array(metric_all_subjects, dtype=np.float32)[:, :, :, :, np.newaxis]
 
 
 def create_hdf5_file(hdf5_file, pheno_file, metrics):
@@ -54,7 +54,7 @@ def create_hdf5_file(hdf5_file, pheno_file, metrics):
         # Map these columns from df_pheno for later
 
         entry.attrs['SUB_ID'] = df_pheno['SUB_ID'].values
-        entry.attrs['SITE_ID'] = df_pheno['SITE_ID'].values
+        entry.attrs['SITE_ID'] = np.string_(list(df_pheno['SITE_ID']))
         entry.attrs['AGE_AT_SCAN'] = df_pheno['AGE_AT_SCAN'].values
         entry.attrs['DX_GROUP'] = df_pheno['DX_GROUP'].values
         entry.attrs['SEX'] = df_pheno['SEX'].values
@@ -76,7 +76,7 @@ def run():
                    'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize',
                    'lfcd_weighted', 'entropy', 'reho', 'vmhc', 'autocorr', 'falff', ]
 
-    create_hdf5_file(pheno_file, output_hdf5_file, metrics=all_metrics)
+    create_hdf5_file(output_hdf5_file, pheno_file, metrics=all_metrics)
 
 
 if __name__ == '__main__':
