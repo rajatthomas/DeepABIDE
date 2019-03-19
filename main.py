@@ -103,10 +103,10 @@ if __name__ == '__main__':
     model, parameters = generate_model(opt)
     print(model)
 
-    if not opt.no_cuda:
-        criterion = criterion.cuda()
+    for train_idx, val_idx, test_idx in zip(train_indices, val_indices, test_indices):
 
-    for train_idx, test_idx in zip(train_indices, test_indices):
+        if not opt.no_cuda:
+            criterion = criterion.cuda()
 
         if not opt.no_train:
             print('Setting up train_loader')
@@ -138,10 +138,9 @@ if __name__ == '__main__':
             scheduler = lr_scheduler.ReduceLROnPlateau(
                 optimizer, 'min', patience=opt.lr_patience)
 
-
         if not opt.no_val:
             print('Setting up validation_loader')
-            validation_data = get_data_set(opt, split='valid_3d')
+            validation_data = get_data_set(opt, val_idx)
             val_loader = DataLoader(
                 validation_data,
                 batch_size=opt.batch_size,
@@ -182,7 +181,7 @@ if __name__ == '__main__':
 
         if not opt.no_test:
             print('Setting up test_loader')
-            test_data = get_data_set(opt, split='test_3d')
+            test_data = get_data_set(opt, test_idx)
             test_loader = torch.utils.data.DataLoader(
                 test_data,
                 batch_size=opt.batch_size,

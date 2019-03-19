@@ -28,6 +28,8 @@ def parse_opts():
     parser.add_argument(
         '--kfolds', default=10, type=int, help='# of folds in kfold validation')
     parser.add_argument(
+        '--val_frac', default=0.1, type=float, help='fraction of train for validation')
+    parser.add_argument(
         '--image_size',
         default=(45, 54, 45),  # Images in 4mm MNI coordinates
         type=int,

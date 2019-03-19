@@ -48,7 +48,7 @@ class abide_data(Dataset):
         return self.data[item], self.labels[item]
 
 
-def get_data_set(opt, split_indices, transform=None):
-    data_set = abide_data(opt, split=split_indicies, transform=transform)
+def get_data_set(opt, split_indicies, transform=None):
+    data_set = abide_data(opt, split_indicies, transform=transform)
     return data_set
 
