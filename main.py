@@ -20,8 +20,6 @@ import os
 
 from sklearn.model_selection import KFold
 
-
-
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
@@ -60,6 +58,12 @@ if __name__ == '__main__':
         json.dump(vars(opt), opt_file)
 
     torch.manual_seed(opt.manual_seed)
+
+    # measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
+    #             'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
+    #             'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
+
+    measures = ['alff']
 
     if opt.site_wise_cv and opt.kfold_cv:
         print('Warning: Both kfold and site-wise CV specified. Defaulting to site_wise')
@@ -105,94 +109,95 @@ if __name__ == '__main__':
     model, parameters = generate_model(opt)
     print(model)
 
-    for train_idx, val_idx, test_idx, fold_name in zip(train_indices, val_indices, test_indices, fold_names):
+    for measure in measures:
+        for train_idx, val_idx, test_idx, fold_name in zip(train_indices, val_indices, test_indices, fold_names):
 
-        criterion = nn.CrossEntropyLoss()
-        if not opt.no_cuda:
-            criterion = criterion.cuda()
+            criterion = nn.CrossEntropyLoss()
+            if not opt.no_cuda:
+                criterion = criterion.cuda()
 
-        if not opt.no_train:
-            print('Setting up train_loader')
-            training_data = get_data_set(opt, train_idx)
-            train_loader = DataLoader(
-                training_data,
-                batch_size=opt.batch_size,
-                shuffle=True,
-                num_workers=opt.n_threads,
-                pin_memory=True)
-            train_logger = Logger(
-                os.path.join(opt.result_path, f'train_{fold_name}.log'),
-                ['epoch', 'loss', 'acc', 'lr'])
-            train_batch_logger = Logger(
-                os.path.join(opt.result_path, 'train_batch.log'),
-                ['epoch', 'batch', 'iter', 'loss', 'acc', 'lr'])
-
-            if opt.nesterov:
-                dampening = 0
-            else:
-                dampening = opt.dampening
-            optimizer = optim.SGD(
-                parameters,
-                lr=opt.learning_rate,
-                momentum=opt.momentum,
-                dampening=dampening,
-                weight_decay=opt.weight_decay,
-                nesterov=opt.nesterov)
-            scheduler = lr_scheduler.ReduceLROnPlateau(
-                optimizer, 'min', patience=opt.lr_patience)
-
-        if not opt.no_val:
-            print('Setting up validation_loader')
-            validation_data = get_data_set(opt, val_idx)
-            val_loader = DataLoader(
-                validation_data,
-                batch_size=opt.batch_size,
-                shuffle=False,
-                num_workers=opt.n_threads,
-                pin_memory=True)
-            val_logger = Logger(
-                os.path.join(opt.result_path, f'val_{fold_name}.log'), ['epoch', 'loss', 'acc'])
-
-        if opt.resume_path:
-            print('loading checkpoint {}'.format(opt.resume_path))
-            checkpoint = torch.load(opt.resume_path)
-            assert opt.arch == checkpoint['arch']
-
-            opt.begin_epoch = checkpoint['epoch']
-            model.load_state_dict(checkpoint['state_dict'])
             if not opt.no_train:
-                optimizer.load_state_dict(checkpoint['optimizer'])
+                print('Setting up train_loader')
+                training_data = get_data_set(opt, train_idx)
+                train_loader = DataLoader(
+                    training_data,
+                    batch_size=opt.batch_size,
+                    shuffle=True,
+                    num_workers=opt.n_threads,
+                    pin_memory=True)
+                train_logger = Logger(
+                    os.path.join(opt.result_path, f'train_{measure}_{fold_name}.log'),
+                    ['epoch', 'loss', 'acc', 'lr'])
+                train_batch_logger = Logger(
+                    os.path.join(opt.result_path, 'train_batch.log'),
+                    ['epoch', 'batch', 'iter', 'loss', 'acc', 'lr'])
 
-        print('run')
+                if opt.nesterov:
+                    dampening = 0
+                else:
+                    dampening = opt.dampening
+                optimizer = optim.SGD(
+                    parameters,
+                    lr=opt.learning_rate,
+                    momentum=opt.momentum,
+                    dampening=dampening,
+                    weight_decay=opt.weight_decay,
+                    nesterov=opt.nesterov)
+                scheduler = lr_scheduler.ReduceLROnPlateau(
+                    optimizer, 'min', patience=opt.lr_patience)
 
-        stop_criterion = EarlyStopping()
-
-        for i in range(opt.begin_epoch, opt.n_epochs + 1):
-            if not opt.no_train:
-                train_epoch(i, train_loader, model, criterion, optimizer, opt,
-                            train_logger, train_batch_logger)
             if not opt.no_val:
-                validation_loss = val_epoch(i, val_loader, model, criterion, opt,
-                                            val_logger)
+                print('Setting up validation_loader')
+                validation_data = get_data_set(opt, val_idx)
+                val_loader = DataLoader(
+                    validation_data,
+                    batch_size=opt.batch_size,
+                    shuffle=False,
+                    num_workers=opt.n_threads,
+                    pin_memory=True)
+                val_logger = Logger(
+                    os.path.join(opt.result_path, f'val_{measure}_{fold_name}.log'), ['epoch', 'loss', 'acc'])
 
-            stop_criterion.eval_loss(validation_loss)
-            if stop_criterion.get_nsteps() >= 10:
-                break
+            if opt.resume_path:
+                print('loading checkpoint {}'.format(opt.resume_path))
+                checkpoint = torch.load(opt.resume_path)
+                assert opt.arch == checkpoint['arch']
 
-            if not opt.no_train and not opt.no_val:
-                scheduler.step(validation_loss)
+                opt.begin_epoch = checkpoint['epoch']
+                model.load_state_dict(checkpoint['state_dict'])
+                if not opt.no_train:
+                    optimizer.load_state_dict(checkpoint['optimizer'])
 
-        if not opt.no_test:
-            print('Setting up test_loader')
-            test_data = get_data_set(opt, test_idx)
-            test_loader = torch.utils.data.DataLoader(
-                test_data,
-                batch_size=opt.batch_size,
-                shuffle=False,
-                num_workers=opt.n_threads,
-                pin_memory=True)
+            print('run')
 
-            test_logger = Logger(
-                os.path.join(opt.result_path, f'test_{fold_name}.log'), ['loss', 'acc'])
-            test_loss = test_epoch(test_loader, model, criterion, opt,
-                                   test_logger)
+            stop_criterion = EarlyStopping()
+
+            for i in range(opt.begin_epoch, opt.n_epochs + 1):
+                if not opt.no_train:
+                    train_epoch(i, train_loader, model, criterion, optimizer, opt,
+                                train_logger, train_batch_logger)
+                if not opt.no_val:
+                    validation_loss = val_epoch(i, val_loader, model, criterion, opt,
+                                                val_logger)
+
+                stop_criterion.eval_loss(validation_loss)
+                if stop_criterion.get_nsteps() >= 10:
+                    break
+
+                if not opt.no_train and not opt.no_val:
+                    scheduler.step(validation_loss)
+
+            if not opt.no_test:
+                print('Setting up test_loader')
+                test_data = get_data_set(opt, test_idx)
+                test_loader = torch.utils.data.DataLoader(
+                    test_data,
+                    batch_size=opt.batch_size,
+                    shuffle=False,
+                    num_workers=opt.n_threads,
+                    pin_memory=True)
+
+                test_logger = Logger(
+                    os.path.join(opt.result_path, f'test_{measure}_{fold_name}.log'), ['loss', 'acc'])
+                test_loss = test_epoch(test_loader, model, criterion, opt,
+                                       test_logger)
