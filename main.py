@@ -61,8 +61,6 @@ if __name__ == '__main__':
 
     torch.manual_seed(opt.manual_seed)
 
-    criterion = nn.CrossEntropyLoss()
-
     if opt.site_wise_cv and opt.kfold_cv:
         print('Warning: Both kfold and site-wise CV specified. Defaulting to site_wise')
         opt.kfold_cv = False
@@ -81,30 +79,35 @@ if __name__ == '__main__':
     train_indices = []
     val_indices = []
     test_indices = []
+    fold_names = []
 
     if opt.kfold_cv:
         X = np.zeros(len(np.zeros(n_subjects, 1)))  # dummy variable to create indices
-        for l_train, l_test in kf.split(X):
+        for fold_i, (l_train, l_test) in enumerate(kf.split(X)):
             val_size = int(len(l_train)*opt.val_frac)
+
             train_indices.append(l_train[:-val_size])
             val_indices.append(l_train[-val_size:])
             test_indices.append(l_test)
+            fold_names.append(f'kfold_{fold_i}')
 
     if opt.site_wise_cv:
         for s in all_sites:
             l_train = site_id != s
             l_test = site_id == s
-
             val_size = int(len(l_train) * opt.val_frac)
+
             train_indices.append(l_train[:-val_size])
             val_indices.append(l_train[-val_size:])
             test_indices.append(l_test)
+            fold_names.append(s)
 
     model, parameters = generate_model(opt)
     print(model)
 
-    for train_idx, val_idx, test_idx in zip(train_indices, val_indices, test_indices):
+    for train_idx, val_idx, test_idx, fold_name in zip(train_indices, val_indices, test_indices, fold_names):
 
+        criterion = nn.CrossEntropyLoss()
         if not opt.no_cuda:
             criterion = criterion.cuda()
 
@@ -118,7 +121,7 @@ if __name__ == '__main__':
                 num_workers=opt.n_threads,
                 pin_memory=True)
             train_logger = Logger(
-                os.path.join(opt.result_path, 'train.log'),
+                os.path.join(opt.result_path, f'train_{fold_name}.log'),
                 ['epoch', 'loss', 'acc', 'lr'])
             train_batch_logger = Logger(
                 os.path.join(opt.result_path, 'train_batch.log'),
@@ -148,7 +151,7 @@ if __name__ == '__main__':
                 num_workers=opt.n_threads,
                 pin_memory=True)
             val_logger = Logger(
-                os.path.join(opt.result_path, 'val.log'), ['epoch', 'loss', 'acc'])
+                os.path.join(opt.result_path, f'val_{fold_name}.log'), ['epoch', 'loss', 'acc'])
 
         if opt.resume_path:
             print('loading checkpoint {}'.format(opt.resume_path))
@@ -190,6 +193,6 @@ if __name__ == '__main__':
                 pin_memory=True)
 
             test_logger = Logger(
-                os.path.join(opt.result_path, 'test.log'), ['loss', 'acc'])
+                os.path.join(opt.result_path, f'test_{fold_name}.log'), ['loss', 'acc'])
             test_loss = test_epoch(test_loader, model, criterion, opt,
                                    test_logger)
