@@ -96,9 +96,10 @@ if __name__ == '__main__':
             fold_names.append(f'kfold_{fold_i}')
 
     if opt.site_wise_cv:
+        indices = np.arange(n_subjects)
         for s in all_sites:
-            l_train = site_id != s
-            l_test = site_id == s
+            l_train = indices[site_id != s]
+            l_test = indices[site_id == s]
             val_size = int(len(l_train) * opt.val_frac)
 
             train_indices.append(l_train[:-val_size])
@@ -118,7 +119,7 @@ if __name__ == '__main__':
 
             if not opt.no_train:
                 print('Setting up train_loader')
-                training_data = get_data_set(opt, train_idx)
+                training_data = get_data_set(opt, train_idx, measure)
                 train_loader = DataLoader(
                     training_data,
                     batch_size=opt.batch_size,
@@ -148,7 +149,7 @@ if __name__ == '__main__':
 
             if not opt.no_val:
                 print('Setting up validation_loader')
-                validation_data = get_data_set(opt, val_idx)
+                validation_data = get_data_set(opt, val_idx, measure)
                 val_loader = DataLoader(
                     validation_data,
                     batch_size=opt.batch_size,
@@ -189,7 +190,7 @@ if __name__ == '__main__':
 
             if not opt.no_test:
                 print('Setting up test_loader')
-                test_data = get_data_set(opt, test_idx)
+                test_data = get_data_set(opt, test_idx, measure)
                 test_loader = torch.utils.data.DataLoader(
                     test_data,
                     batch_size=opt.batch_size,

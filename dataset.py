@@ -3,6 +3,8 @@ import os.path as osp
 import torch
 import h5py as h5
 
+import numpy as np
+
 
 class abide_data(Dataset):
 
@@ -18,7 +20,7 @@ class abide_data(Dataset):
         data_file = osp.join(opt.root_path, opt.data_file)
         hfile = h5.File(data_file)
 
-        data = hfile[f'summaries/{measure}'].value[split_indicies, :, :, :]
+        data = np.squeeze(hfile[f'summaries/{measure}'].value[split_indicies, :, :, :])
         labels = hfile['summaries'].attrs['DX_GROUP'][split_indicies]
 
         #import pdb; pdb.set_trace()
@@ -37,17 +39,18 @@ class abide_data(Dataset):
         #             import pdb;pdb.set_trace()
         #         data[i_subj] = mask * (data_subj - mean_subj) / std_subj
 
-        self.data = torch.from_numpy(data).type(torch.FloatTensor)
+        self.data = torch.from_numpy(np.expand_dims(data, axis=1)).type(torch.FloatTensor)
         self.labels = torch.from_numpy(labels).type(torch.LongTensor)
 
     def __len__(self):
         return self.data.shape[0]
 
     def __getitem__(self, item):
+
         return self.data[item], self.labels[item]
 
 
-def get_data_set(opt, split_indicies, transform=None):
-    data_set = abide_data(opt, split_indicies, transform=transform)
+def get_data_set(opt, split_indicies, measure, transform=None):
+    data_set = abide_data(opt, split_indicies, measure, transform=transform)
     return data_set
 
