@@ -1,5 +1,4 @@
 import os
-from glob import glob
 from time import time
 from sys import stdout
 import pandas as pd

@@ -1,6 +1,5 @@
 from torch.utils.data import Dataset
 import os.path as osp
-import numpy as np
 import torch
 import h5py as h5
 
