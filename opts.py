@@ -5,17 +5,17 @@ def parse_opts():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--root_path',
-        default='/data_local/deeplearning/PAC_competition/numpy_data', # '/data_local/deeplearning/DeepNeurologe/',  # '/data_local/deeplearning/PAC_competition/numpy_data',
+        default='/data_local/deeplearning/ABIDE_SummaryMeasures',
         type=str,
         help='Root directory path of data')
     parser.add_argument(
         '--data_file',
-        default='data4mm.npz', # ''data_6mm.npz',  # 'data4mm.npz', # data.npz (data for PAC competition 2mm resolution)
+        default='fmri_summary_abideI_II.hdf5',
         type=str,
-        help='Numpy binary file with train, test and validation datasets')
+        help='HDF5 file with all fMRI measures (3D data) and labels. + Meta data')
     parser.add_argument(
         '--result_path',
-        default='/data_local/deeplearning/PAC_competition/deep_results', # '/data_local/deeplearning/DeepNeurologe/deep_results',  # ''/data_local/deeplearning/PAC_competition/deep_results',
+        default='/data_local/deeplearning/DeepABIDE/results',
         type=str,
         help='Result directory path')
     parser.add_argument(
@@ -23,13 +23,15 @@ def parse_opts():
         default=2,
         type=int,
         help=
-        'Number of classes (depressed vs controls as default)'
+        'Number of classes (ASD vs controls as default)'
     )
     parser.add_argument(
+        '--kfolds', default=10, type=int, help='# of folds in kfold validation')
+    parser.add_argument(
         '--image_size',
-        default=(45, 54, 45),  # (30, 36, 30),  # (121, 145, 121), # (45, 54, 45),
+        default=(45, 54, 45),  # Images in 4mm MNI coordinates
         type=int,
-        help='tuple of x-, y- and z- dimensions, e.g., (109, 91, 109)')
+        help='tuple of x-, y- and z- dimensions, e.g., (45, 54, 45)')
     parser.add_argument(
         '--standardize', action='store_true', help='standardize across subject dimension')
     parser.add_argument(
@@ -126,12 +128,12 @@ def parse_opts():
         'If 1, range of inputs is [0-255]. If 255, range of inputs is [0-1].')
     parser.add_argument(
         '--model',
-        default='densenet',
+        default='resnet',
         type=str,
         help='(resnet | preresnet | wideresnet | resnext | densenet | ')
     parser.add_argument(
         '--model_depth',
-        default=121,
+        default=50,
         type=int,
         help='Depth of resnet (10 | 18 | 34 | 50 | 101) Depth of densenet (121 | 169 | 201 | 264)')
     parser.add_argument(

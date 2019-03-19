@@ -1,4 +1,3 @@
-import os
 import json
 import torch
 from torch import nn
@@ -15,6 +14,11 @@ from train import train_epoch
 from validation import val_epoch
 from test import test_epoch
 import os
+
+from sklearn.model_selection import KFold
+
+
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 if __name__ == '__main__':
@@ -29,9 +33,12 @@ if __name__ == '__main__':
 
     torch.manual_seed(opt.manual_seed)
 
+    criterion = nn.CrossEntropyLoss()
+
+    kf = KFold(n_splits=opt.kfolds)
+
     model, parameters = generate_model(opt)
     print(model)
-    criterion = nn.CrossEntropyLoss()
     if not opt.no_cuda:
         criterion = criterion.cuda()
 
