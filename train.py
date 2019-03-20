@@ -27,9 +27,10 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, opt,
         targets = Variable(targets)
         outputs = model(inputs)
         loss = criterion(outputs, targets)
+
         acc = calculate_accuracy(outputs, targets)
 
-        losses.update(loss.data[0], inputs.size(0))
+        losses.update(loss.item(), inputs.size(0))
         accuracies.update(acc, inputs.size(0))
 
         optimizer.zero_grad()
@@ -53,13 +54,13 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, opt,
               'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
               'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
               'Acc {acc.val:.3f} ({acc.avg:.3f})'.format(
-                  epoch,
-                  i + 1,
-                  len(data_loader),
-                  batch_time=batch_time,
-                  data_time=data_time,
-                  loss=losses,
-                  acc=accuracies))
+            epoch,
+            i + 1,
+            len(data_loader),
+            batch_time=batch_time,
+            data_time=data_time,
+            loss=losses,
+            acc=accuracies))
 
     epoch_logger.log({
         'epoch': epoch,
