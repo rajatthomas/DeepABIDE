@@ -107,12 +107,12 @@ if __name__ == '__main__':
             test_indices.append(l_test)
             fold_names.append(s)
 
-    model, parameters = generate_model(opt)
-    print(model)
 
     for measure in measures:
         for train_idx, val_idx, test_idx, fold_name in zip(train_indices, val_indices, test_indices, fold_names):
 
+            model, parameters = generate_model(opt)
+            print(model)
             criterion = nn.CrossEntropyLoss()
             if not opt.no_cuda:
                 criterion = criterion.cuda()
