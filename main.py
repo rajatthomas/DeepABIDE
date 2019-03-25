@@ -59,11 +59,9 @@ if __name__ == '__main__':
 
     torch.manual_seed(opt.manual_seed)
 
-    # measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
-    #             'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
-    #             'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
-
-    measures = ['alff']
+    measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
+                'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
+                'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
 
     if opt.site_wise_cv and opt.kfold_cv:
         print('Warning: Both kfold and site-wise CV specified. Defaulting to site_wise')
@@ -105,8 +103,7 @@ if __name__ == '__main__':
             train_indices.append(l_train[:-val_size])
             val_indices.append(l_train[-val_size:])
             test_indices.append(l_test)
-            fold_names.append(s)
-
+            fold_names.append(s.decode())  # .decode converts byte to string, e.g., b'UCLA' -> 'UCLA'
 
     for measure in measures:
         for train_idx, val_idx, test_idx, fold_name in zip(train_indices, val_indices, test_indices, fold_names):
