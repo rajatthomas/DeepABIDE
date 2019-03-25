@@ -30,9 +30,9 @@ def parse_opts():
     parser.add_argument(
         '--val_frac', default=0.1, type=float, help='fraction of train for validation')
     parser.add_argument(
-        '--site_wise_cv', default=True, type=bool, help='perform cross-val across sites')
+        '--site_wise_cv', default=False, type=bool, help='perform cross-val across sites')
     parser.add_argument(
-        '--kfold_cv', default=False, type=bool, help='perform cross-val across folds')
+        '--kfold_cv', default=True, type=bool, help='perform cross-val across folds')
     parser.add_argument(
         '--image_size',
         default=(45, 54, 45),  # Images in 4mm MNI coordinates

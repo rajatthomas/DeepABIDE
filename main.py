@@ -86,7 +86,7 @@ if __name__ == '__main__':
     fold_names = []
 
     if opt.kfold_cv:
-        X = np.zeros(len(np.zeros(n_subjects, 1)))  # dummy variable to create indices
+        X = np.zeros((n_subjects, 1))  # dummy variable to create indices
         for fold_i, (l_train, l_test) in enumerate(kf.split(X)):
             val_size = int(len(l_train)*opt.val_frac)
 
