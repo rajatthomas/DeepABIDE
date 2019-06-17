@@ -15,7 +15,7 @@ def parse_opts():
         help='HDF5 file with all fMRI measures (3D data) and labels. + Meta data')
     parser.add_argument(
         '--result_path',
-        default='/data_local/deeplearning/DeepABIDE/results',
+        default='/data_local/deeplearning/DeepABIDE/results_lr01_Std_resnet_18_epoch150',
         type=str,
         help='Result directory path')
     parser.add_argument(
@@ -42,7 +42,7 @@ def parse_opts():
         '--standardize', action='store_true', help='standardize across subject dimension')
     parser.add_argument(
         '--learning_rate',
-        default=0.1,
+        default=0.01,
         type=float,
         help=
         'Initial learning rate (divided by 10 while training by lr scheduler)')
@@ -69,7 +69,7 @@ def parse_opts():
         '--batch_size', default=12, type=int, help='Batch Size')
     parser.add_argument(
         '--n_epochs',
-        default=70,
+        default=150,
         type=int,
         help='Number of total epochs to run')
     parser.add_argument(
@@ -139,7 +139,7 @@ def parse_opts():
         help='(resnet | preresnet | wideresnet | resnext | densenet | ')
     parser.add_argument(
         '--model_depth',
-        default=50,
+        default=18,
         type=int,
         help='Depth of resnet (10 | 18 | 34 | 50 | 101) Depth of densenet (121 | 169 | 201 | 264)')
     parser.add_argument(

@@ -166,7 +166,7 @@ class ResNet(nn.Module):
                         planes * block.expansion,
                         kernel_size=1,
                         stride=stride,
-                        bias=False), nn.BatchNorm3d(planes * block.expansion), nn.Dropout3d(p=0.3))
+                        bias=False), nn.BatchNorm3d(planes * block.expansion), nn.Dropout3d(p=0.6))
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))
@@ -180,7 +180,7 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        drop_out = nn.Dropout3d(p=0.3)
+        drop_out = nn.Dropout3d(p=0.5)
         x = drop_out(x)
         x = self.maxpool(x)
 

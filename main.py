@@ -20,7 +20,7 @@ import os
 
 from sklearn.model_selection import KFold
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 class EarlyStopping():
@@ -59,9 +59,11 @@ if __name__ == '__main__':
 
     torch.manual_seed(opt.manual_seed)
 
-    measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
-                'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
-                'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
+    #measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
+    #             'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
+    #             'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
+
+    measures = ['degree_centrality_weighted', 'eigenvector_centrality_weighted', 'lfcd_weighted', 'reho', 'vmhc']
 
     if opt.site_wise_cv and opt.kfold_cv:
         print('Warning: Both kfold and site-wise CV specified. Defaulting to site_wise')

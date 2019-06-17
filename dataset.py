@@ -20,10 +20,19 @@ class abide_data(Dataset):
         data_file = osp.join(opt.root_path, opt.data_file)
         hfile = h5.File(data_file)
 
-        data = np.squeeze(hfile[f'summaries/{measure}'].value[split_indicies, :, :, :])
-        labels = hfile['summaries'].attrs['DX_GROUP'][split_indicies]
+        data = np.squeeze(hfile[f'summaries/{measure}'].value)
 
         #import pdb; pdb.set_trace()
+
+        if opt.standardize:
+            mdata = data.mean(axis=0)
+            sdata = data.std(axis=0)
+
+            data = (data - mdata)/(sdata+1)  # 1 avoids the divide-by-zero error
+
+        data = data[split_indicies, :, :, :]
+        labels = hfile['summaries'].attrs['DX_GROUP'][split_indicies]
+
 
         # if opt.standardize:
         #
