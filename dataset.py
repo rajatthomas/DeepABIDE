@@ -8,7 +8,7 @@ import numpy as np
 
 class abide_data(Dataset):
 
-    def __init__(self, opt, split_indicies, measure, subset=subset, transform=None):
+    def __init__(self, opt, split_indicies, measure, subset, transform=None):
         """
 
         :param opt: Command line option(/defaults)
@@ -60,7 +60,7 @@ class abide_data(Dataset):
         return self.data[item], self.labels[item]
 
 
-def get_data_set(opt, split_indicies, measure, subset=subset, transform=None):
+def get_data_set(opt, split_indicies, measure, subset, transform=None):
     data_set = abide_data(opt, split_indicies, measure, subset=subset, transform=transform)
     return data_set
 
