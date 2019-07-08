@@ -15,7 +15,7 @@ def parse_opts():
         help='HDF5 file with all fMRI measures (3D data) and labels. + Meta data')
     parser.add_argument(
         '--result_path',
-        default='/data_local/deeplearning/DeepABIDE/results_lr01_Std_resnet_18_epoch150',
+        default='/data_local/deeplearning/DeepABIDE/results_ABIDEI_lr01_Std_resnet_18_epoch150',
         type=str,
         help='Result directory path')
     parser.add_argument(
@@ -25,6 +25,8 @@ def parse_opts():
         help=
         'Number of classes (ASD vs controls as default)'
     )
+    parser.add_argument(
+        '--abide', default=1, type=int, help='1 for ABIDEI and include all if anything else')
     parser.add_argument(
         '--kfolds', default=10, type=int, help='# of folds in kfold validation')
     parser.add_argument(
@@ -66,7 +68,7 @@ def parse_opts():
         help='Patience of LR scheduler. See documentation of ReduceLROnPlateau.'
     )
     parser.add_argument(
-        '--batch_size', default=12, type=int, help='Batch Size')
+        '--batch_size', default=8, type=int, help='Batch Size')
     parser.add_argument(
         '--n_epochs',
         default=150,

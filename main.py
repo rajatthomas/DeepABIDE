@@ -59,11 +59,11 @@ if __name__ == '__main__':
 
     torch.manual_seed(opt.manual_seed)
 
-    #measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
-    #             'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
-    #             'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
+    measures = ['alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
+                 'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize', 'lfcd_weighted',
+                 'entropy', 'reho', 'vmhc', 'autocorr', 'falff']
 
-    measures = ['degree_centrality_weighted', 'eigenvector_centrality_weighted', 'lfcd_weighted', 'reho', 'vmhc']
+    #measures = ['degree_centrality_weighted', 'eigenvector_centrality_weighted', 'lfcd_weighted', 'reho', 'vmhc']
 
     if opt.site_wise_cv and opt.kfold_cv:
         print('Warning: Both kfold and site-wise CV specified. Defaulting to site_wise')
@@ -72,10 +72,13 @@ if __name__ == '__main__':
     # Site-wise classification
     hfile = h5.File(osp.join(opt.root_path, opt.data_file))
 
-    site_id = hfile['summaries'].attrs['SITE_ID']
+    if opt.abide == 1:
+        to_select = hfile['summaries'].attrs['ABIDE_I_or_II'] == 1  # choose only ABIDEI
+
+    site_id = hfile['summaries'].attrs['SITE_ID'][to_select]
     all_sites = np.unique(site_id)
 
-    n_subjects = len(hfile['summaries'].attrs['DX_GROUP'])  # DX_GROUP [0,1] -> [ASD, CON]
+    n_subjects = len(hfile['summaries'].attrs['DX_GROUP'][to_select])  # DX_GROUP [0,1] -> [ASD, CON]
 
     # Create indices for doing kfold cross-validation
     kf = KFold(n_splits=opt.kfolds, random_state=42, shuffle=True)
@@ -118,7 +121,7 @@ if __name__ == '__main__':
 
             if not opt.no_train:
                 print('Setting up train_loader')
-                training_data = get_data_set(opt, train_idx, measure)
+                training_data = get_data_set(opt, train_idx, measure, subset=to_select)
                 train_loader = DataLoader(
                     training_data,
                     batch_size=opt.batch_size,
@@ -148,7 +151,7 @@ if __name__ == '__main__':
 
             if not opt.no_val:
                 print('Setting up validation_loader')
-                validation_data = get_data_set(opt, val_idx, measure)
+                validation_data = get_data_set(opt, val_idx, measure, subset=to_select)
                 val_loader = DataLoader(
                     validation_data,
                     batch_size=opt.batch_size,
@@ -189,7 +192,7 @@ if __name__ == '__main__':
 
             if not opt.no_test:
                 print('Setting up test_loader')
-                test_data = get_data_set(opt, test_idx, measure)
+                test_data = get_data_set(opt, test_idx, measure, subset=to_select)
                 test_loader = torch.utils.data.DataLoader(
                     test_data,
                     batch_size=opt.batch_size,

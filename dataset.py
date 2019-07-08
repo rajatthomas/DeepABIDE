@@ -8,7 +8,7 @@ import numpy as np
 
 class abide_data(Dataset):
 
-    def __init__(self, opt, split_indicies, measure, transform=None):
+    def __init__(self, opt, split_indicies, measure, subset=subset, transform=None):
         """
 
         :param opt: Command line option(/defaults)
@@ -16,11 +16,12 @@ class abide_data(Dataset):
         :param measure: One of the following: 'alff', 'T1', 'degree_centrality_binarize', 'degree_centrality_weighted',
                    'eigenvector_centrality_binarize', 'eigenvector_centrality_weighted', 'lfcd_binarize',
                    'lfcd_weighted', 'entropy', 'reho', 'vmhc', 'autocorr', 'falff',
+        :param subset: boolean indices with which subjects to select (for example ABIDEI vs ABIDEII)
         """
         data_file = osp.join(opt.root_path, opt.data_file)
         hfile = h5.File(data_file)
 
-        data = np.squeeze(hfile[f'summaries/{measure}'].value)
+        data = np.squeeze(hfile[f'summaries/{measure}'][subset, :, :, :, :])
 
         #import pdb; pdb.set_trace()
 
@@ -59,7 +60,7 @@ class abide_data(Dataset):
         return self.data[item], self.labels[item]
 
 
-def get_data_set(opt, split_indicies, measure, transform=None):
-    data_set = abide_data(opt, split_indicies, measure, transform=transform)
+def get_data_set(opt, split_indicies, measure, subset=subset, transform=None):
+    data_set = abide_data(opt, split_indicies, measure, subset=subset, transform=transform)
     return data_set
 
